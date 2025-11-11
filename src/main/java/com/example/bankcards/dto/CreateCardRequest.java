@@ -1,12 +1,14 @@
 package com.example.bankcards.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
 @Schema(description = "Запрос на создание новой карты")
+@Builder
 public class CreateCardRequest {
 
     @Schema(
