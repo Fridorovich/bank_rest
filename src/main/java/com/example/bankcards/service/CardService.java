@@ -269,39 +269,28 @@ public class CardService {
      * @return постраничный результат
      */
     public PageResponse<CardDto> getUserCardsWithFilter(Long userId, CardFilterRequest filter) {
-        // Валидация параметров пагинации
-        if (filter.getPage() == null || filter.getPage() < 0) {
-            filter.setPage(0);
-        }
-        if (filter.getSize() == null || filter.getSize() <= 0) {
-            filter.setSize(10);
-        }
-        if (filter.getSortBy() == null || filter.getSortBy().trim().isEmpty()) {
-            filter.setSortBy("id");
-        }
+        int page = filter.getPage() != null && filter.getPage() >= 0 ? filter.getPage() : 0;
+        int size = filter.getSize() != null && filter.getSize() > 0 ? filter.getSize() : 10;
 
-        Sort.Direction direction = filter.getSortDirection();
-        Pageable pageable = PageRequest.of(
-                filter.getPage(),
-                filter.getSize(),
-                Sort.by(direction, filter.getSortBy())
-        );
-
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
         Page<Card> cardPage;
 
-        if (filter.getStatus() != null && filter.getSearchTerm() != null) {
-            cardPage = cardRepository.findByUserIdAndStatusAndNumberContaining(
-                    userId, filter.getStatus(), filter.getSearchTerm(), pageable);
+        String validatedSearchTerm = validateAndFormatSearchTerm(filter.getSearchTerm());
+
+        if (filter.getStatus() != null && validatedSearchTerm != null) {
+            cardPage = cardRepository.findByUserIdAndStatusAndLastFourDigits(
+                    userId, filter.getStatus(), validatedSearchTerm, pageable);
         } else if (filter.getStatus() != null) {
             cardPage = cardRepository.findByUserIdAndStatus(userId, filter.getStatus(), pageable);
-        } else if (filter.getSearchTerm() != null) {
-            cardPage = cardRepository.findByUserIdAndNumberContaining(userId, filter.getSearchTerm(), pageable);
+        } else if (validatedSearchTerm != null) {
+            cardPage = cardRepository.findByUserIdAndLastFourDigits(userId, validatedSearchTerm, pageable);
         } else {
             cardPage = cardRepository.findByUserId(userId, pageable);
         }
 
         return convertToPageResponse(cardPage);
     }
+
 
     /**
      * Получение баланса карты пользователя
@@ -353,6 +342,20 @@ public class CardService {
         cardRepository.saveAll(expiredCards);
         System.out.println("Updated " + expiredCards.size() + " expired cards to EXPIRED status");
     }*/
+
+    private String validateAndFormatSearchTerm(String searchTerm) {
+        if (searchTerm == null || searchTerm.trim().isEmpty()) {
+            return null;
+        }
+
+        String digitsOnly = searchTerm.replaceAll("[^0-9]", "");
+
+        if (digitsOnly.length() > 4) {
+            digitsOnly = digitsOnly.substring(digitsOnly.length() - 4);
+        }
+
+        return digitsOnly.isEmpty() ? null : digitsOnly;
+    }
 
     /**
      * Валидация перевода между картами

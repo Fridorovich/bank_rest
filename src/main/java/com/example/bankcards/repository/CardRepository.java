@@ -29,7 +29,7 @@ public interface CardRepository extends JpaRepository<Card, Long> {
 
     Page<Card> findByUserId(Long userId, Pageable pageable);
     Page<Card> findByUserIdAndStatus(Long userId, CardStatus status, Pageable pageable);
-    
+
     @Query("SELECT c FROM Card c WHERE c.user.id = :userId AND c.number LIKE %:searchTerm%")
     Page<Card> findByUserIdAndNumberContaining(@Param("userId") Long userId,
                                                @Param("searchTerm") String searchTerm,
@@ -43,4 +43,17 @@ public interface CardRepository extends JpaRepository<Card, Long> {
 
     @Query("SELECT c FROM Card c WHERE c.expiryDate < CURRENT_DATE AND c.status = 'ACTIVE'")
     List<Card> findExpiredActiveCards();
+
+    @Query("SELECT c FROM Card c WHERE c.user.id = :userId AND c.number LIKE %:lastFourDigits")
+    Page<Card> findByUserIdAndLastFourDigits(@Param("userId") Long userId,
+                                             @Param("lastFourDigits") String lastFourDigits,
+                                             Pageable pageable);
+
+    @Query("SELECT c FROM Card c WHERE c.user.id = :userId AND c.status = :status AND c.number LIKE %:lastFourDigits")
+    Page<Card> findByUserIdAndStatusAndLastFourDigits(@Param("userId") Long userId,
+                                                      @Param("status") CardStatus status,
+                                                      @Param("lastFourDigits") String lastFourDigits,
+                                                      Pageable pageable);
+
+    Optional<Long> countByUserIdAndStatus(Long userId, CardStatus status);
 }

@@ -4,8 +4,8 @@ server:
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/bankDB
-    username: postgres
-    password: postgres
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -16,13 +16,13 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
   liquibase:
-    change-log: classpath:db\migration\master.yaml
+    change-log: classpath:db/migration/master.yaml
 
 # JWT
 app:
   jwt:
-    secret: your_jwt_secret_key
-    expiration-in-ms: 86400000
+    secret: ${JWT_SECRET:your_default_secret}
+    expiration-in-ms: ${JWT_EXPIRATION_MS:86400000}
 
 # Swagger
 springdoc:
