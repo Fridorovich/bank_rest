@@ -2,6 +2,7 @@ package com.example.bankcards.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -13,6 +14,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
+@Builder
 public class Card {
 
     @Id
@@ -37,9 +39,6 @@ public class Card {
     private User user;
 
     public String getMaskedNumber() {
-        if (number == null || number.length() < 4) {
-            return "**** **** **** ****";
-        }
         return "**** **** **** " + number.substring(number.length() - 4);
     }
 }
