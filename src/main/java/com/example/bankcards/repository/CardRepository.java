@@ -55,5 +55,5 @@ public interface CardRepository extends JpaRepository<Card, Long> {
                                                       @Param("lastFourDigits") String lastFourDigits,
                                                       Pageable pageable);
 
-    Optional<Long> countByUserIdAndStatus(Long userId, CardStatus status);
+    Long countByUserIdAndStatus(Long userId, CardStatus status);
 }

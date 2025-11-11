@@ -1,0 +1,153 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-add-indexes
+      author: developer
+      changes:
+        - createIndex:
+            indexName: idx_users_username
+            tableName: users
+            columns:
+              - column:
+                  name: username
+                  type: VARCHAR(255)
+            unique: true
+
+        - createIndex:
+            indexName: idx_roles_name
+            tableName: roles
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+            unique: true
+
+        - createIndex:
+            indexName: idx_user_roles_user_id
+            tableName: user_roles
+            columns:
+              - column:
+                  name: user_id
+                  type: BIGINT
+
+        - createIndex:
+            indexName: idx_user_roles_role_id
+            tableName: user_roles
+            columns:
+              - column:
+                  name: role_id
+                  type: BIGINT
+
+        - createIndex:
+            indexName: idx_cards_number
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  type: VARCHAR(19)
+            unique: true
+
+        - createIndex:
+            indexName: idx_cards_user_id
+            tableName: cards
+            columns:
+              - column:
+                  name: user_id
+                  type: BIGINT
+
+        - createIndex:
+            indexName: idx_cards_status
+            tableName: cards
+            columns:
+              - column:
+                  name: status
+                  type: VARCHAR(255)
+
+        - createIndex:
+            indexName: idx_cards_expiry_date
+            tableName: cards
+            columns:
+              - column:
+                  name: expiry_date
+                  type: DATE
+
+        - createIndex:
+            indexName: idx_cards_user_status
+            tableName: cards
+            columns:
+              - column:
+                  name: user_id
+                  type: BIGINT
+              - column:
+                  name: status
+                  type: VARCHAR(255)
+
+        - createIndex:
+            indexName: idx_cards_user_expiry
+            tableName: cards
+            columns:
+              - column:
+                  name: user_id
+                  type: BIGINT
+              - column:
+                  name: expiry_date
+                  type: DATE
+
+        #Составной индекс для поиска по пользователю и статусу с сортировкой по балансу
+        - createIndex:
+            indexName: idx_cards_user_status_balance
+            tableName: cards
+            columns:
+              - column:
+                  name: user_id
+                  type: BIGINT
+              - column:
+                  name: status
+                  type: VARCHAR(255)
+              - column:
+                  name: balance
+                  type: DECIMAL(19,2)
+
+      rollback:
+        - dropIndex:
+            indexName: idx_users_username
+            tableName: users
+
+        - dropIndex:
+            indexName: idx_roles_name
+            tableName: roles
+
+        - dropIndex:
+            indexName: idx_user_roles_user_id
+            tableName: user_roles
+
+        - dropIndex:
+            indexName: idx_user_roles_role_id
+            tableName: user_roles
+
+        - dropIndex:
+            indexName: idx_cards_number
+            tableName: cards
+
+        - dropIndex:
+            indexName: idx_cards_user_id
+            tableName: cards
+
+        - dropIndex:
+            indexName: idx_cards_status
+            tableName: cards
+
+        - dropIndex:
+            indexName: idx_cards_expiry_date
+            tableName: cards
+
+        - dropIndex:
+            indexName: idx_cards_user_status
+            tableName: cards
+
+        - dropIndex:
+            indexName: idx_cards_user_expiry
+            tableName: cards
+
+        - dropIndex:
+            indexName: idx_cards_user_status_balance
+            tableName: cards

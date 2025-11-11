@@ -1,4 +1,3 @@
-# db/changelog/db.changelog-master.xml -> db/changelog/001-create-schema.yaml
 databaseChangeLog:
   - changeSet:
       id: 001-create-roles-table

@@ -1,5 +1,6 @@
 package com.example.bankcards.exception;
 
+import com.example.bankcards.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,38 +26,95 @@ public class GlobalExceptionHandler {
     }*/
 
     /**
-     * Обработка ошибок валидации
+     * Обработка ошибок валидации DTO
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationExceptions(
-            MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
+        ex.getBindingResult().getAllErrors().forEach(error -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        return ResponseEntity.badRequest().body(errors);
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Validation Failed")
+                .message("One or more fields are invalid")
+                .details(errors)
+                .build();
+
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 
     /**
-     * Обработка бизнес-ошибок
+     * Обработка исключений пользователя
      */
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, String>> handleBusinessExceptions(RuntimeException ex) {
-        Map<String, String> error = new HashMap<>();
-        error.put("error", ex.getMessage());
-        return ResponseEntity.badRequest().body(error);
+    @ExceptionHandler(UserException.class)
+    public ResponseEntity<ErrorResponse> handleUserExceptions(UserException ex) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("User Operation Failed")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * Обработка исключений ролей
+     */
+    @ExceptionHandler(RoleException.class)
+    public ResponseEntity<ErrorResponse> handleRoleExceptions(RoleException ex) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Role Operation Failed")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * Обработка исключений карт
+     */
+    @ExceptionHandler(CardException.class)
+    public ResponseEntity<ErrorResponse> handleCardExceptions(CardException ex) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Card Operation Failed")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * Обработка общих бизнес-исключений
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessExceptions(BusinessException ex) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Business Rule Violation")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 
     /**
      * Обработка всех остальных исключений
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleGenericExceptions(Exception ex) {
-        Map<String, String> error = new HashMap<>();
-        error.put("error", "Internal server error");
-        error.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    public ResponseEntity<ErrorResponse> handleGenericExceptions(Exception ex) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .error("Internal Server Error")
+                .message("An unexpected error occurred")
+                .build();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 }

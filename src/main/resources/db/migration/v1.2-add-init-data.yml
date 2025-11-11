@@ -1,0 +1,250 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-insert-initial-roles
+      author: developer
+      changes:
+        - insert:
+            tableName: roles
+            columns:
+              - column:
+                  name: name
+                  value: "USER"
+        - insert:
+            tableName: roles
+            columns:
+              - column:
+                  name: name
+                  value: "ADMIN"
+      rollback:
+        - delete:
+            tableName: roles
+            where: "name IN ('USER', 'ADMIN')"
+
+  - changeSet:
+      id: 007-insert-admin-user
+      author: developer
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: username
+                  value: "admin"
+              - column:
+                  name: password
+                  value: "$2a$10$8.UnVuG9HHgffUDAlk8qfOuWk8KH3B2dC3q.zYzK.U5L6dP.EpMjO" # password: admin123
+        - insert:
+            tableName: user_roles
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'admin')"
+              - column:
+                  name: role_id
+                  valueComputed: "(SELECT id FROM roles WHERE name = 'ADMIN')"
+        - insert:
+            tableName: user_roles
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'admin')"
+              - column:
+                  name: role_id
+                  valueComputed: "(SELECT id FROM roles WHERE name = 'USER')"
+      rollback:
+        - delete:
+            tableName: user_roles
+            where: "user_id = (SELECT id FROM users WHERE username = 'admin')"
+        - delete:
+            tableName: users
+            where: "username = 'admin'"
+
+  - changeSet:
+      id: 008-insert-test-users
+      author: developer
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: username
+                  value: "user1"
+              - column:
+                  name: password
+                  value: "$2a$10$8.UnVuG9HHgffUDAlk8qfOuWk8KH3B2dC3q.zYzK.U5L6dP.EpMjO" # password: admin123
+        - insert:
+            tableName: user_roles
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'user1')"
+              - column:
+                  name: role_id
+                  valueComputed: "(SELECT id FROM roles WHERE name = 'USER')"
+
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: username
+                  value: "user2"
+              - column:
+                  name: password
+                  value: "$2a$10$8.UnVuG9HHgffUDAlk8qfOuWk8KH3B2dC3q.zYzK.U5L6dP.EpMjO" # password: admin123
+        - insert:
+            tableName: user_roles
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'user2')"
+              - column:
+                  name: role_id
+                  valueComputed: "(SELECT id FROM roles WHERE name = 'USER')"
+      rollback:
+        - delete:
+            tableName: user_roles
+            where: "user_id IN (SELECT id FROM users WHERE username IN ('user1', 'user2'))"
+        - delete:
+            tableName: users
+            where: "username IN ('user1', 'user2')"
+
+  - changeSet:
+      id: 009-insert-test-cards
+      author: developer
+      changes:
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "4111111111111111"
+              - column:
+                  name: expiry_date
+                  value: "2026-12-31"
+              - column:
+                  name: status
+                  value: "ACTIVE"
+              - column:
+                  name: balance
+                  value: "5000.00"
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'admin')"
+
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "4222222222222222"
+              - column:
+                  name: expiry_date
+                  value: "2025-06-30"
+              - column:
+                  name: status
+                  value: "ACTIVE"
+              - column:
+                  name: balance
+                  value: "2500.50"
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'admin')"
+
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "4555555555555555"
+              - column:
+                  name: expiry_date
+                  value: "2027-03-15"
+              - column:
+                  name: status
+                  value: "ACTIVE"
+              - column:
+                  name: balance
+                  value: "1000.00"
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'user1')"
+
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "4666666666666666"
+              - column:
+                  name: expiry_date
+                  value: "2024-11-30" # Просроченная карта
+              - column:
+                  name: status
+                  value: "EXPIRED"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'user1')"
+
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "4777777777777777"
+              - column:
+                  name: expiry_date
+                  value: "2026-08-20"
+              - column:
+                  name: status
+                  value: "BLOCKED"
+              - column:
+                  name: balance
+                  value: "750.25"
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'user1')"
+
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "4888888888888888"
+              - column:
+                  name: expiry_date
+                  value: "2028-01-10"
+              - column:
+                  name: status
+                  value: "ACTIVE"
+              - column:
+                  name: balance
+                  value: "3000.75"
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'user2')"
+
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "4999999999999999"
+              - column:
+                  name: expiry_date
+                  value: "2025-09-15"
+              - column:
+                  name: status
+                  value: "ACTIVE"
+              - column:
+                  name: balance
+                  value: "150.00"
+              - column:
+                  name: user_id
+                  valueComputed: "(SELECT id FROM users WHERE username = 'user2')"
+      rollback:
+        - delete:
+            tableName: cards
+            where: "number IN ('4111111111111111', '4222222222222222', '4555555555555555', '4666666666666666', '4777777777777777', '4888888888888888', '4999999999999999')"

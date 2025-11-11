@@ -28,3 +28,11 @@ build/
 .env
 
 .vscode/
+
+.git
+.gitignore
+README.md
+*.log
+*.jar
+.vscode
+node_modules
