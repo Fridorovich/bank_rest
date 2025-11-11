@@ -1,32 +1,38 @@
 package com.example.bankcards.service;
 
-import com.example.bankcards.dto.CardDto;
-import com.example.bankcards.dto.CreateCardRequest;
-import com.example.bankcards.dto.UpdateCardRequest;
+import com.example.bankcards.dto.*;
 import com.example.bankcards.entity.Card;
 import com.example.bankcards.entity.CardStatus;
 import com.example.bankcards.entity.User;
 import com.example.bankcards.repository.CardRepository;
 import com.example.bankcards.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 /**
  * Сервис для управления банковскими картами
- * Реализует CRUD операции с разделением прав доступа между ADMIN и USER
+ * Реализует CRUD операции, переводы, фильтрацию с пагинацией
  */
 @Service
 @RequiredArgsConstructor
 public class CardService {
     private final CardRepository cardRepository;
     private final UserRepository userRepository;
+
+    private final AtomicLong transactionIdGenerator = new AtomicLong(1);
 
     /**
      * Создание новой карты (только для ADMIN)
@@ -206,6 +212,132 @@ public class CardService {
     }
 
     /**
+     * Перевод средств между картами пользователя
+     * @param request запрос на перевод
+     * @param userId ID пользователя (для проверки владения картами)
+     * @return информация о выполненной транзакции
+     * @throws RuntimeException если перевод невозможен
+     */
+    @Transactional
+    public TransferResponse transferBetweenOwnCards(TransferRequest request, Long userId) {
+        Card fromCard = cardRepository.findByIdAndUserId(request.getFromCardId(), userId)
+                .orElseThrow(() -> new RuntimeException("Source card not found or access denied"));
+
+        Card toCard = cardRepository.findByIdAndUserId(request.getToCardId(), userId)
+                .orElseThrow(() -> new RuntimeException("Destination card not found or access denied"));
+
+        validateTransfer(fromCard, toCard, request.getAmount());
+
+        fromCard.setBalance(fromCard.getBalance().subtract(request.getAmount()));
+        toCard.setBalance(toCard.getBalance().add(request.getAmount()));
+
+        cardRepository.save(fromCard);
+        cardRepository.save(toCard);
+
+        return TransferResponse.builder()
+                .transactionId(transactionIdGenerator.getAndIncrement())
+                .fromCardMasked(fromCard.getMaskedNumber())
+                .toCardMasked(toCard.getMaskedNumber())
+                .amount(request.getAmount())
+                .description(request.getDescription())
+                .timestamp(LocalDateTime.now())
+                .status("COMPLETED")
+                .build();
+    }
+
+    /**
+     * Запрос на блокировку карты (иницируется пользователем)
+     * @param cardId ID карты
+     * @param userId ID пользователя
+     * @param reason причина блокировки
+     * @throws RuntimeException если карта не найдена или не принадлежит пользователю
+     */
+    @Transactional
+    public void requestCardBlock(Long cardId, Long userId, String reason) {
+        Card card = cardRepository.findByIdAndUserId(cardId, userId)
+                .orElseThrow(() -> new RuntimeException("Card not found or access denied"));
+
+        System.out.println("Block request for card: " + card.getMaskedNumber() +
+                ", User: " + userId + ", Reason: " + reason);
+
+    }
+
+    /**
+     * Получение отфильтрованного списка карт пользователя с пагинацией
+     * @param userId ID пользователя
+     * @param filter параметры фильтрации
+     * @return постраничный результат
+     */
+    public PageResponse<CardDto> getUserCardsWithFilter(Long userId, CardFilterRequest filter) {
+        // Валидация параметров пагинации
+        if (filter.getPage() == null || filter.getPage() < 0) {
+            filter.setPage(0);
+        }
+        if (filter.getSize() == null || filter.getSize() <= 0) {
+            filter.setSize(10);
+        }
+        if (filter.getSortBy() == null || filter.getSortBy().trim().isEmpty()) {
+            filter.setSortBy("id");
+        }
+
+        Sort.Direction direction = filter.getSortDirection();
+        Pageable pageable = PageRequest.of(
+                filter.getPage(),
+                filter.getSize(),
+                Sort.by(direction, filter.getSortBy())
+        );
+
+        Page<Card> cardPage;
+
+        if (filter.getStatus() != null && filter.getSearchTerm() != null) {
+            cardPage = cardRepository.findByUserIdAndStatusAndNumberContaining(
+                    userId, filter.getStatus(), filter.getSearchTerm(), pageable);
+        } else if (filter.getStatus() != null) {
+            cardPage = cardRepository.findByUserIdAndStatus(userId, filter.getStatus(), pageable);
+        } else if (filter.getSearchTerm() != null) {
+            cardPage = cardRepository.findByUserIdAndNumberContaining(userId, filter.getSearchTerm(), pageable);
+        } else {
+            cardPage = cardRepository.findByUserId(userId, pageable);
+        }
+
+        return convertToPageResponse(cardPage);
+    }
+
+    /**
+     * Получение баланса карты пользователя
+     * @param cardId ID карты
+     * @param userId ID пользователя
+     * @return баланс карты
+     * @throws RuntimeException если карта не найдена или не принадлежит пользователю
+     */
+    public BigDecimal getCardBalance(Long cardId, Long userId) {
+        Card card = cardRepository.findByIdAndUserId(cardId, userId)
+                .orElseThrow(() -> new RuntimeException("Card not found or access denied"));
+        return card.getBalance();
+    }
+
+    /**
+     * Получение истории переводов пользователя (имитация - в реальном приложении была бы отдельная таблица)
+     * @param userId ID пользователя
+     * @param page номер страницы
+     * @param size размер страницы
+     * @return постраничный список последних операций (заглушка)
+     */
+    public PageResponse<TransferResponse> getTransferHistory(Long userId, int page, int size) {
+        List<TransferResponse> emptyList = List.of();
+
+        return PageResponse.<TransferResponse>builder()
+                .content(emptyList)
+                .currentPage(page)
+                .totalPages(0)
+                .totalElements(0)
+                .pageSize(size)
+                .first(true)
+                .last(true)
+                .build();
+    }
+
+    /**
      * Автоматическое обновление статуса просроченных карт
      * Выполняется ежедневно в полночь
      */
@@ -221,6 +353,59 @@ public class CardService {
         cardRepository.saveAll(expiredCards);
         System.out.println("Updated " + expiredCards.size() + " expired cards to EXPIRED status");
     }*/
+
+    /**
+     * Валидация перевода между картами
+     */
+    private void validateTransfer(Card fromCard, Card toCard, BigDecimal amount) {
+        if (fromCard.getStatus() != CardStatus.ACTIVE) {
+            throw new RuntimeException("Source card is not active. Current status: " + fromCard.getStatus());
+        }
+
+        if (toCard.getStatus() != CardStatus.ACTIVE) {
+            throw new RuntimeException("Destination card is not active. Current status: " + toCard.getStatus());
+        }
+
+        if (fromCard.getExpiryDate().isBefore(LocalDate.now())) {
+            throw new RuntimeException("Source card is expired");
+        }
+
+        if (toCard.getExpiryDate().isBefore(LocalDate.now())) {
+            throw new RuntimeException("Destination card is expired");
+        }
+
+        if (fromCard.getBalance().compareTo(amount) < 0) {
+            throw new RuntimeException("Insufficient funds. Available: " + fromCard.getBalance());
+        }
+
+        if (fromCard.getId().equals(toCard.getId())) {
+            throw new RuntimeException("Cannot transfer to the same card");
+        }
+
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("Transfer amount must be positive");
+        }
+
+        if (amount.compareTo(new BigDecimal("1000000")) > 0) {
+            throw new RuntimeException("Transfer amount cannot exceed 1,000,000");
+        }
+    }
+
+    private PageResponse<CardDto> convertToPageResponse(Page<Card> cardPage) {
+        List<CardDto> cardDtos = cardPage.getContent().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+
+        return PageResponse.<CardDto>builder()
+                .content(cardDtos)
+                .currentPage(cardPage.getNumber())
+                .totalPages(cardPage.getTotalPages())
+                .totalElements(cardPage.getTotalElements())
+                .pageSize(cardPage.getSize())
+                .first(cardPage.isFirst())
+                .last(cardPage.isLast())
+                .build();
+    }
 
     /**
      * Преобразование сущности Card в DTO с использованием Builder
