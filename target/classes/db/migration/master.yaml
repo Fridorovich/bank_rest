@@ -1,0 +1,5 @@
+databaseChangeLog:
+  - include:
+      file: db/migration/v1.0-initial-schema.yml
+#  - include:
+#      file: db/migration/v1.1-add-indexes.yml
